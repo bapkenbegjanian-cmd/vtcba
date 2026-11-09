@@ -15,6 +15,7 @@
 :root { --bg: #0b0b0d; --bg2: #121216; --card: #16161b; --line: rgba(255,255,255,.09); --ink: #f3f1ec; --muted: #a4a19b; --gold: #c8a96a; --gold2: #e6cf9f;
   --title: "Instrument Serif", Georgia, serif; --ui: "Inter", system-ui, -apple-system, sans-serif; color-scheme: dark; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--ui); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 a { color: inherit; }
@@ -244,11 +245,11 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: 
       <label class="ac">Adresse de départ<input name="dep" id="dep" autocomplete="off" placeholder="Ex. 10 place Bellecour, Lyon" required aria-autocomplete="list"></label>
       <label class="ac">Adresse d'arrivée<input name="arr" id="arr" autocomplete="off" placeholder="Ex. Aéroport Lyon-Saint-Exupéry" required aria-autocomplete="list"></label>
       <div class="row"><label>Date<input type="date" name="date" required></label><label>Heure<input type="time" name="heure" required></label></div>
+      <div class="price" id="price" hidden aria-live="polite"><span id="pl">Estimation</span><b id="pv">–</b><small id="pd"></small></div>
       <div class="row"><label>Passagers<select name="pax"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
         <label>Bagages<select name="bag"><option>Aucun</option><option>1</option><option>2</option><option>3</option><option>4 ou plus</option></select></label></div>
       <div class="row"><label>Votre nom<input name="nom" autocomplete="name" placeholder="Prénom et nom" required></label><label>Votre téléphone<input name="tel" type="tel" autocomplete="tel" placeholder="06 12 34 56 78" required></label></div>
       <label>Précisions (facultatif)<textarea name="msg" placeholder="Numéro de vol, siège enfant, arrêt en route…"></textarea></label>
-      <div class="price" id="price" hidden aria-live="polite"><span id="pl">Estimation</span><b id="pv">–</b><small id="pd"></small></div>
       <p class="err" id="err" role="alert"></p>
       <a class="btn gold" id="go" href="#" target="_blank" rel="noopener" hidden>Ouvrir et envoyer ma demande</a>
       <div class="sendrow"><button class="btn gold" type="submit" data-via="wa">Envoyer par WhatsApp</button><button class="btn line" type="submit" data-via="sms">Envoyer par SMS</button></div>
