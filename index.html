@@ -122,6 +122,18 @@ textarea { min-height: 90px; resize: vertical; }
 .sendrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } @media (max-width: 560px) { .sendrow { grid-template-columns: 1fr; } }
 .note { font-size: 13px; color: var(--muted); margin: 0; }
 .err { color: #ffb4a8; font-size: 14px; min-height: 1em; margin: 0; }
+.ac { position: relative; }
+.sug { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; list-style: none; margin: 0; padding: 6px; background: #17171c; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; box-shadow: 0 18px 40px rgba(0,0,0,.5); }
+.sug li { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14.5px; color: var(--ink); font-weight: 500; }
+.sug li small { display: block; color: var(--muted); font-weight: 400; font-size: 12.5px; }
+.sug li[aria-selected="true"], .sug li:hover { background: rgba(200,169,106,.14); }
+.price { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 14px; padding: 18px 20px; border-radius: 16px; border: 1px solid rgba(200,169,106,.35); background: rgba(200,169,106,.07); }
+.price b { font: 400 40px/1 var(--title); color: var(--gold2); grid-row: span 2; }
+.price span { font-weight: 600; } .price small { color: var(--muted); font-size: 13px; }
+.tarifs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 760px) { .tarifs { grid-template-columns: repeat(4, 1fr); } }
+.tarifs div { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.tarifs b { display: block; font: 400 26px/1.1 var(--title); color: var(--gold2); } .tarifs span { font-size: 13px; color: var(--muted); }
 .side { display: grid; gap: 18px; align-content: start; }
 .side .big { font: 400 clamp(28px, 4vw, 40px)/1.1 var(--title); text-decoration: none; color: var(--gold2); }
 
@@ -222,19 +234,21 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: 
     <div class="side">
       <span class="kicker">Devis gratuit</span>
       <h2>Votre prix, <i>en quelques minutes.</i></h2>
-      <p class="sub">Remplissez le formulaire : votre demande part directement sur notre téléphone, et nous vous répondons rapidement avec un prix fixe.</p>
+      <p class="sub">Indiquez votre trajet : le prix s'affiche tout de suite. Votre demande part ensuite directement sur notre téléphone, et nous vous confirmons la course.</p>
+      <div class="tarifs"><div><b>2 €</b><span>par kilomètre</span></div><div><b>20 €</b><span>course minimum</span></div><div><b>65 €</b><span>Lyon ⇄ Saint-Exupéry</span></div><div><b>+20 %</b><span>la nuit, 22h-6h</span></div></div>
       <p class="note">Pressé ? Appelez-nous, à toute heure :</p>
       <a class="big" href="tel:+33758220257">07 58 22 02 57</a>
     </div>
     <form id="f" novalidate>
       <div class="seg" role="radiogroup" aria-label="Type de trajet"><label><input type="radio" name="type" value="Aller simple" checked> Aller simple</label><label><input type="radio" name="type" value="Aller-retour"> Aller-retour</label></div>
-      <label>Adresse de départ<input name="dep" autocomplete="street-address" placeholder="Ex. 10 place Bellecour, Lyon" required></label>
-      <label>Adresse d'arrivée<input name="arr" placeholder="Ex. Aéroport Lyon-Saint-Exupéry" required></label>
+      <label class="ac">Adresse de départ<input name="dep" id="dep" autocomplete="off" placeholder="Ex. 10 place Bellecour, Lyon" required aria-autocomplete="list"></label>
+      <label class="ac">Adresse d'arrivée<input name="arr" id="arr" autocomplete="off" placeholder="Ex. Aéroport Lyon-Saint-Exupéry" required aria-autocomplete="list"></label>
       <div class="row"><label>Date<input type="date" name="date" required></label><label>Heure<input type="time" name="heure" required></label></div>
       <div class="row"><label>Passagers<select name="pax"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
         <label>Bagages<select name="bag"><option>Aucun</option><option>1</option><option>2</option><option>3</option><option>4 ou plus</option></select></label></div>
       <div class="row"><label>Votre nom<input name="nom" autocomplete="name" placeholder="Prénom et nom" required></label><label>Votre téléphone<input name="tel" type="tel" autocomplete="tel" placeholder="06 12 34 56 78" required></label></div>
       <label>Précisions (facultatif)<textarea name="msg" placeholder="Numéro de vol, siège enfant, arrêt en route…"></textarea></label>
+      <div class="price" id="price" hidden aria-live="polite"><span id="pl">Estimation</span><b id="pv">–</b><small id="pd"></small></div>
       <p class="err" id="err" role="alert"></p>
       <a class="btn gold" id="go" href="#" target="_blank" rel="noopener" hidden>Ouvrir et envoyer ma demande</a>
       <div class="sendrow"><button class="btn gold" type="submit" data-via="wa">Envoyer par WhatsApp</button><button class="btn line" type="submit" data-via="sms">Envoyer par SMS</button></div>
@@ -278,6 +292,51 @@ document.querySelectorAll('.rv').forEach(el => io ? io.observe(el) : el.classLis
 // la date du jour par défaut, pas de date passée
 const d = document.querySelector('[name=date]'), today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
 d.min = today.toISOString().slice(0, 10);
+// ---- calculateur de prix : adresses (Base Adresse Nationale) et distance par la route (IGN), sans clé ----
+const TARIF = { km: 2, mini: 20, nuit: .2, nuitDe: 22, nuitA: 6, aeroport: 65 };
+const AERO = [5.0811, 45.7234], ZONE = /^69(00[1-9]|100)$/;   // Saint-Exupéry ; Lyon 1er-9e et Villeurbanne
+const PT = {}, EST_BOX = { el: document.getElementById('price'), v: document.getElementById('pv'), d: document.getElementById('pd'), l: document.getElementById('pl') };
+let EST = null, seq = 0;
+function suggest(input) {
+  const ul = document.createElement('ul'); ul.className = 'sug'; ul.hidden = true; ul.setAttribute('role', 'listbox'); input.parentNode.appendChild(ul);
+  let t = 0, items = [], idx = -1;
+  const close = () => { ul.hidden = true; idx = -1; };
+  const pick = it => { input.value = it.label; PT[input.name] = it; close(); compute(); };
+  input.addEventListener('input', () => { delete PT[input.name]; compute(); clearTimeout(t); const q = input.value.trim(); if (q.length < 3) { close(); return; }
+    t = setTimeout(async () => { try {
+      const r = await fetch('https://api-adresse.data.gouv.fr/search/?limit=5&autocomplete=1&lat=45.76&lon=4.85&q=' + encodeURIComponent(q)); const d = await r.json();
+      items = (d.features || []).map(f => ({ label: f.properties.label, city: f.properties.context, cp: f.properties.postcode || '', type: f.properties.type, name: f.properties.name, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
+      if (/a[ée]roport|saint[- ]exup|st[- ]exup/i.test(q)) items.unshift({ label: 'Aéroport Lyon-Saint-Exupéry, 69125 Colombier-Saugnieu', city: 'Aéroport', cp: '69125', lon: AERO[0], lat: AERO[1], aero: true });
+      ul.innerHTML = items.slice(0, 5).map((it, i) => `<li role="option" data-i="${i}">${it.label.replace(/[<>&]/g, '')}<small>${(it.city || '').replace(/[<>&]/g, '')}</small></li>`).join(''); ul.hidden = !items.length; idx = -1;
+    } catch (_) { close(); } }, 220); });
+  ul.addEventListener('mousedown', e => { const li = e.target.closest('li'); if (li) { e.preventDefault(); pick(items[+li.dataset.i]); } });
+  input.addEventListener('keydown', e => { if (ul.hidden) return; const lis = ul.querySelectorAll('li');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); idx = (idx + (e.key === 'ArrowDown' ? 1 : -1) + lis.length) % lis.length; lis.forEach((l, i) => l.setAttribute('aria-selected', i === idx)); }
+    else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); pick(items[idx]); } else if (e.key === 'Escape') close(); });
+  input.addEventListener('blur', () => setTimeout(close, 150));
+}
+const isAero = p => p && (p.aero || p.cp === '69125' && /a[ée]roport/i.test(p.label));
+const isNight = () => { const h = (document.querySelector('[name=heure]').value || '').split(':')[0]; if (h === '') return false; const n = +h; return n >= TARIF.nuitDe || n < TARIF.nuitA; };
+const euros = n => n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+async function compute() {
+  const a = PT.dep, b = PT.arr, box = EST_BOX; EST = null;
+  if (!a || !b) { box.el.hidden = true; return; }
+  const id = ++seq; box.el.hidden = false; box.l.textContent = 'Calcul du trajet…'; box.v.textContent = '…'; box.d.textContent = '';
+  let km = null;
+  try { const r = await fetch(`https://data.geopf.fr/navigation/itineraire?resource=bdtopo-osrm&profile=car&optimization=fastest&start=${a.lon},${a.lat}&end=${b.lon},${b.lat}&distanceUnit=kilometer&getSteps=false`); const d = await r.json(); km = +d.distance; } catch (_) {}
+  if (id !== seq) return;
+  if (!km || !isFinite(km)) { box.l.textContent = 'Estimation indisponible'; box.v.textContent = '–'; box.d.textContent = 'Envoyez votre demande, nous vous donnons le prix rapidement.'; return; }
+  const rt = (document.querySelector('[name=type]:checked') || {}).value === 'Aller-retour', night = isNight();
+  const forfait = (isAero(a) && ZONE.test(b.cp)) || (isAero(b) && ZONE.test(a.cp));
+  let one = forfait ? TARIF.aeroport : Math.max(TARIF.mini, km * TARIF.km) * (night ? 1 + TARIF.nuit : 1);
+  one = Math.round(one); const total = rt ? one * 2 : one;
+  const detail = `${km.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km` + (forfait ? ' · forfait aéroport' : night ? ' · tarif de nuit' : '') + (rt ? ' · aller-retour' : '');
+  EST = { total: euros(total), detail };
+  box.l.textContent = 'Prix estimé'; box.v.textContent = euros(total) + ' €'; box.d.textContent = detail + ' · confirmé avant le départ';
+}
+['dep', 'arr'].forEach(n => suggest(document.getElementById(n)));
+document.querySelectorAll('[name=type], [name=heure]').forEach(x => x.addEventListener('change', compute));
+
 // le devis part sur WhatsApp ou par SMS, déjà rédigé
 const PHONE = '33758220257';
 document.getElementById('f').addEventListener('submit', e => {
@@ -289,6 +348,7 @@ document.getElementById('f').addEventListener('submit', e => {
   const date = new Date(v('date') + 'T' + v('heure')), when = isNaN(date) ? v('date') + ' ' + v('heure') : date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' à ' + v('heure');
   const txt = `Bonjour B & A Drive, je souhaite un devis.\n\n` +
     `Trajet : ${f.elements.type.value}\nDépart : ${v('dep')}\nArrivée : ${v('arr')}\nLe : ${when}\nPassagers : ${v('pax')} · Bagages : ${v('bag')}\n` +
+    (EST ? `Estimation du site : ${EST.total} € (${EST.detail})\n` : '') +
     (v('msg') ? `Précisions : ${v('msg')}\n` : '') + `\nNom : ${v('nom')}\nTéléphone : ${v('tel')}`;
   const via = (e.submitter && e.submitter.dataset.via) || 'wa';
   const url = via === 'sms' ? `sms:+${PHONE}${/iPhone|iPad|iPod/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(txt)}` : `https://wa.me/${PHONE}?text=${encodeURIComponent(txt)}`;
